@@ -2,8 +2,7 @@ import sys, socket
 from PyQt4 import QtGui, QtCore
 
 errormsg = 'Could not connect to server.'
-emptymsg = 'Please enter a server to connect to.'
-port = 8000
+emptymsg = 'Please enter a server and port to connect to.'
 
 class ConnectWindow(QtGui.QWidget):
 
@@ -16,15 +15,28 @@ class ConnectWindow(QtGui.QWidget):
 	def initUI(self):
 		"""initializes windows and any contained widgets"""
 		self.btn = QtGui.QPushButton('Connect', self)
-		self.btn.move(190, 20)
+		self.btn.move(140, 150)
 		self.btn.clicked.connect(self.getServer)
 
+		self.lbl1 = QtGui.QLabel('Please enter the server name\n'
+			'and port that you wish to connect to', self)
+		self.lbl1.move(30, 14)
+
+		self.lbl2 = QtGui.QLabel('Server: ', self)
+		self.lbl2.move(30, 62)
+
+		self.lbl3 = QtGui.QLabel('Port: ', self)
+		self.lbl3.move(30, 102)
+
 		self.server = QtGui.QLineEdit(self)
-		self.server.move(20, 22)
+		self.server.move(140, 62)
+
+		self.port = QtGui.QLineEdit(self)
+		self.port.move(140, 102)
 
 		self.error = QtGui.QErrorMessage()
 
-		self.setGeometry(300, 300, 300, 200)
+		self.setGeometry(300, 300, 340, 200)
 		self.setWindowTitle('Talk')
 		self.center()
 		self.show()
@@ -39,13 +51,12 @@ class ConnectWindow(QtGui.QWidget):
 	def getServer(self):
 		"""tries to connect to server"""
 		servername = self.server.text()
+		port = self.port.text()
 
-		if not servername:
+		if not servername or not port:
 			self.error.showMessage(emptymsg)
 		else:
-			s = socket.socket()
-			host = servername
-			s.connect((host, port))
+			print servername + ':' + port
 
 class Client():
 
