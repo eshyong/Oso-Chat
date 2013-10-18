@@ -28,9 +28,6 @@ class Server():
 		# inputs to read from, outputs to write to
 		self.inputs = [self.socket, sys.stdin]
 		self.outputs = []
-		self.read, self.write, self.error = select.select(self.inputs, 
-									self.outputs,
-									self.inputs)
 
 	def connect(self):
 		"""accept new connections and add clients"""
@@ -42,9 +39,8 @@ class Server():
 		self.names[conn] = name
 		self.inputs.append(conn)
 		self.outputs.append(conn)
-		print 'names:', self.names
-		print 'inputs:', self.inputs
-		print 'outputs:', self.outputs
+
+		print self.names[conn] + ' says: \"play ball!\"' 
 
 	def getMessage(self, conn):
 		"""receive messages from each client to send out"""
@@ -54,6 +50,7 @@ class Server():
 			self.messages.append((self.names[conn], data))
 		else:
 			# assume dead connection
+			print 'boink: ' + self.names[conn] + ' exiting'
 			conn.close()
 			self.names.pop(conn)
 			self.inputs.remove(conn)
@@ -62,19 +59,18 @@ class Server():
 	def run(self):
 		"""normal operations for server"""
 		# select polls all sockets
-		self.read, self.write, self.error = select.select(self.inputs, 
-									self.outputs, 
-									self.inputs)
+		read, write, error = \
+			select.select(self.inputs, self.outputs, self.inputs)
 
 		# readables
-		for s in self.read:
-			# if s == sys.stdin:
-			# 	# read from CLI
-			# 	cmd = sys.stdin.readline()
-			# 	if cmd == 'exit\n':
-			# 		self.shutdown()
+		for s in read:
+			if s == sys.stdin:
+				# read from CLI
+				cmd = sys.stdin.readline()
+				if cmd == 'exit\n':
+					self.shutdown()
 			# server socket
-			if s == self.socket:
+			elif s == self.socket:
 				# accept new connections
 				self.connect()
 			# client socket
@@ -87,28 +83,26 @@ class Server():
 			tup = self.messages.popleft()
 			msg = tup[0] + ' says: ' + tup[1]
 			for conn in self.names.keys():
-				print conn, ' writes:', msg,
 				conn.send(msg)
 
 		# errors
-		for s in self.error:
+		for s in error:
 			print 'ABORT'
 			s.close()
 
 			# check for socket in other lists
-			if s in self.inputs:
-				self.inputs.remove(s)
-			if s in self.outputs:
-				self.outputs.remove(s)
+			if s in read:
+				read.remove(s)
+			if s in write:
+				write.remove(s)
 
 			# finally, remove socket from error list
-			self.error.remove(s)
+			error.remove(s)
 
 	def shutdown(self):
 		"""shutdowns all communications"""
 		# close server socket
 		self.socket.close()
-		self.inputs.remove(self.socket)
 
 		# close client connections
 		for conn in self.names.keys():
@@ -121,6 +115,8 @@ class Server():
 			self.inputs.pop()
 		while self.outputs:
 			self.outputs.pop()
+
+		sys.exit()
 
 def main():
 	server = Server()
