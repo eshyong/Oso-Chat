@@ -29,7 +29,7 @@ class Server():
 		self.inputs = [self.socket, sys.stdin]
 		self.outputs = []
 
-	def connect(self):
+	def connectClient(self):
 		"""accept new connections and add clients"""
 		# register client name
 		conn, addr = self.socket.accept()
@@ -41,6 +41,9 @@ class Server():
 		self.outputs.append(conn)
 
 		print self.names[conn] + ' says: \"play ball!\"' 
+
+	def authenticate(self, name, password):
+		return
 
 	def getMessage(self, conn):
 		"""receive messages from each client to send out"""
@@ -58,27 +61,25 @@ class Server():
 
 	def run(self):
 		"""normal operations for server"""
-		# select polls all sockets
+		# select polls all sockets, ignore write list as we send to all
 		read, write, error = \
 			select.select(self.inputs, self.outputs, self.inputs)
 
-		# readables
-		for s in read:
-			if s == sys.stdin:
-				# read from CLI
+		# read messages from all inputs
+		for r in read:
+			# CLI command allows user to shutdown server
+			if r == sys.stdin:
 				cmd = sys.stdin.readline()
 				if cmd == 'exit\n':
 					self.shutdown()
-			# server socket
-			elif s == self.socket:
-				# accept new connections
-				self.connect()
-			# client socket
+			# server socket accepts new connections
+			elif r == self.socket:
+				self.connectClient()
+			# client socket retrieves chat messages
 			else:
-				# get messages from client
-				self.getMessage(s)
+				self.getMessage(r)
 
-		# writables
+		# send messages to everyone connected
 		while self.messages:
 			tup = self.messages.popleft()
 			msg = tup[0] + ' says: ' + tup[1]
@@ -86,18 +87,18 @@ class Server():
 				conn.send(msg)
 
 		# errors
-		for s in error:
+		for e in error:
 			print 'ABORT'
-			s.close()
+			e.close()
 
 			# check for socket in other lists
-			if s in read:
-				read.remove(s)
-			if s in write:
-				write.remove(s)
+			if e in read:
+				read.remove(e)
+			if e in write:
+				write.remove(e)
 
 			# finally, remove socket from error list
-			error.remove(s)
+			error.remove(e)
 
 	def shutdown(self):
 		"""shutdowns all communications"""
@@ -111,11 +112,14 @@ class Server():
 		# remove from lists
 		while self.names:
 			self.names.popitem()
+
 		while self.inputs:
 			self.inputs.pop()
+
 		while self.outputs:
 			self.outputs.pop()
 
+		# exit application
 		sys.exit()
 
 def main():
